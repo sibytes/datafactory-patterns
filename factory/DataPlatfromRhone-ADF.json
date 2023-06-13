@@ -1,0 +1,9 @@
+{
+	"name": "DataPlatfromRhone-ADF",
+	"location": "westeurope",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "9e352d0b-24e6-4205-bee4-70a6537955b6",
+		"tenantId": "a69c8df4-e648-4b0a-beb9-b3716a01f60e"
+	}
+}

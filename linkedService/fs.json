@@ -1,0 +1,27 @@
+{
+	"name": "fs",
+	"properties": {
+		"parameters": {
+			"root": {
+				"type": "string"
+			},
+			"service_account": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "FileServer",
+		"typeProperties": {
+			"host": "@{linkedService().root}",
+			"userId": "@{linkedService().service_account}",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KV_Main",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "SQL2019-DEVELOPER"
+			}
+		}
+	}
+}

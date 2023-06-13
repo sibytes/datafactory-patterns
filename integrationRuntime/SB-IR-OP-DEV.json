@@ -1,0 +1,7 @@
+{
+	"name": "SB-IR-OP-DEV",
+	"properties": {
+		"type": "SelfHosted",
+		"description": "sql 2019 vm"
+	}
+}

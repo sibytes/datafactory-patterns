@@ -1,0 +1,10 @@
+{
+	"name": "adls",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://datalakegeneva.dfs.core.windows.net/"
+		}
+	}
+}

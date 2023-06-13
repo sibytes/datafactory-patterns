@@ -1,0 +1,21 @@
+{
+	"name": "file_expectations",
+	"properties": {
+		"activities": [
+			{
+				"name": "Raise Error Invalid Type",
+				"type": "Fail",
+				"dependsOn": [],
+				"userProperties": [],
+				"typeProperties": {
+					"message": "Invalid SQL object type",
+					"errorCode": "100"
+				}
+			}
+		],
+		"folder": {
+			"name": "landing-adls"
+		},
+		"annotations": []
+	}
+}

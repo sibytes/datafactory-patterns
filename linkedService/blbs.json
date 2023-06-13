@@ -1,0 +1,11 @@
+{
+	"name": "blbs",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobStorage",
+		"typeProperties": {
+			"serviceEndpoint": "https://blbdatalakegeneva.blob.core.windows.net/",
+			"accountKind": "StorageV2"
+		}
+	}
+}

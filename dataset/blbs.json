@@ -1,0 +1,20 @@
+{
+	"name": "blbs",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "blbs",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "external"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"container": "source"
+			}
+		}
+	}
+}

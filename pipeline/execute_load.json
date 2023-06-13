@@ -1,0 +1,864 @@
+{
+	"name": "execute_load",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup Project",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[ops].[get_project]",
+						"storedProcedureParameters": {
+							"project": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.project",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "control_db",
+						"type": "DatasetReference"
+					}
+				}
+			},
+			{
+				"name": "Switch Landing Pipeline",
+				"type": "Switch",
+				"dependsOn": [
+					{
+						"activity": "Lookup Project",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"on": {
+						"value": "@activity('Lookup Project').output.firstRow.adf_landing_pipeline",
+						"type": "Expression"
+					},
+					"cases": [
+						{
+							"value": "adls-to-landing_adls",
+							"activities": [
+								{
+									"name": "adls-to-landing_adls",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "adls-to-landing_adls",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "blbs-to-landing_adls",
+							"activities": [
+								{
+									"name": "blbs-to-landing_adls",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "blbs-to-landing_adls",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "fs-to-landing_adls",
+							"activities": [
+								{
+									"name": "fs-to-landing_adls",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "fs-to-landing_adls",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "op_sqls-to-landing_adls_csv",
+							"activities": [
+								{
+									"name": "ops_sqls-to-landing_adls_csv",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "op_sqls-to-landing_adls_csv",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "op_sqls-to-landing_adls_json",
+							"activities": [
+								{
+									"name": "ops_sqls-to-landing_adls_json",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "op_sqls-to-landing_adls_json",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "op_sqls-to-landing_adls_parquet",
+							"activities": [
+								{
+									"name": "ops_sqls-to-landing_adls_parquet",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "op_sqls-to-landing_adls_parquet",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "adls-to-landing_blbs",
+							"activities": [
+								{
+									"name": "adls-to-landing_blbs",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "adls-to-landing_blbs",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "blbs-to-landing_blbs",
+							"activities": [
+								{
+									"name": "blbs-to-landing_blbs",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "blbs-to-landing_blbs",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "fs-to-landing_blbs",
+							"activities": [
+								{
+									"name": "fs-to-landing_blbs",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "fs-to-landing_blbs",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "op_sqls-to-landing_blbs_csv",
+							"activities": [
+								{
+									"name": "op_sqls-to-landing_blbs_csv",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "op_sqls-to-landing_blbs_csv",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "op_sqls-to-landing_blbs_json",
+							"activities": [
+								{
+									"name": "op_sqls-to-landing_blbs_json",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "op_sqls-to-landing_blbs_json",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						},
+						{
+							"value": "op_sqls-to-landing_blbs_parquet",
+							"activities": [
+								{
+									"name": "op_sqls-to-landing_blbs_parquet",
+									"type": "ExecutePipeline",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"pipeline": {
+											"referenceName": "op_sqls-to-landing_blbs_parquet",
+											"type": "PipelineReference"
+										},
+										"waitOnCompletion": true,
+										"parameters": {
+											"from_period": {
+												"value": "@pipeline().parameters.from_period",
+												"type": "Expression"
+											},
+											"to_period": {
+												"value": "@pipeline().parameters.to_period",
+												"type": "Expression"
+											},
+											"partition": {
+												"value": "@pipeline().parameters.partition",
+												"type": "Expression"
+											},
+											"parition_increment": {
+												"value": "@pipeline().parameters.parition_increment",
+												"type": "Expression"
+											},
+											"parameters": {
+												"value": "@pipeline().parameters.parameters",
+												"type": "Expression"
+											},
+											"project": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											},
+											"process_group": {
+												"value": "@pipeline().parameters.process_group",
+												"type": "Expression"
+											},
+											"restart": {
+												"value": "@pipeline().parameters.restart",
+												"type": "Expression"
+											},
+											"delete_older_than_days": {
+												"value": "@activity('Lookup Project').output.firstRow.delete_older_than_days",
+												"type": "Expression"
+											}
+										}
+									}
+								}
+							]
+						}
+					],
+					"defaultActivities": [
+						{
+							"name": "Raise Error Invalid Landing Pipeline",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "Invalid SQL object type",
+								"errorCode": "100"
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "dbx job enabled",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Switch Landing Pipeline",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@activity('Lookup Project').output.firstRow.dbx_job_enabled",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "Execute DBX Job",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "execute_dbx",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true,
+								"parameters": {
+									"dbx_host": {
+										"value": "@pipeline().parameters.dbx_host",
+										"type": "Expression"
+									},
+									"dbx_job_name": {
+										"value": "@activity('Lookup Project').output.firstRow.dbx_job_name",
+										"type": "Expression"
+									},
+									"wait_until_done": {
+										"value": "@activity('Lookup Project').output.firstRow.dbx_wait_until_done",
+										"type": "Expression"
+									},
+									"api_wait_seconds": {
+										"value": "@activity('Lookup Project').output.firstRow.dbx_api_wait_seconds",
+										"type": "Expression"
+									},
+									"project": {
+										"value": "@pipeline().parameters.project",
+										"type": "Expression"
+									},
+									"dbx_timeslice": {
+										"value": "@pipeline().parameters.dbx_timeslice",
+										"type": "Expression"
+									},
+									"dbx_load_type": {
+										"value": "@pipeline().parameters.dbx_load_type",
+										"type": "Expression"
+									},
+									"dbx_max_parallel": {
+										"value": "@pipeline().parameters.dbx_max_parallel",
+										"type": "Expression"
+									}
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"from_period": {
+				"type": "string",
+				"defaultValue": "2023-01-01"
+			},
+			"to_period": {
+				"type": "string",
+				"defaultValue": "2023-01-01"
+			},
+			"partition": {
+				"type": "string",
+				"defaultValue": "day"
+			},
+			"parition_increment": {
+				"type": "int",
+				"defaultValue": 1
+			},
+			"parameters": {
+				"type": "object"
+			},
+			"project": {
+				"type": "string",
+				"defaultValue": "header_footer"
+			},
+			"process_group": {
+				"type": "string",
+				"defaultValue": "default"
+			},
+			"restart": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"dbx_host": {
+				"type": "string",
+				"defaultValue": "adb-8723178682651460.0.azuredatabricks.net"
+			},
+			"dbx_timeslice": {
+				"type": "string",
+				"defaultValue": "2023-01-01"
+			},
+			"dbx_load_type": {
+				"type": "string",
+				"defaultValue": "batch"
+			},
+			"dbx_max_parallel": {
+				"type": "string",
+				"defaultValue": "4"
+			}
+		},
+		"annotations": []
+	}
+}

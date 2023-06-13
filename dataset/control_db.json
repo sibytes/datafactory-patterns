@@ -1,0 +1,15 @@
+{
+	"name": "control_db",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "control_db",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "control"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": []
+	}
+}

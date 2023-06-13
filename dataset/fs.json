@@ -1,0 +1,51 @@
+{
+	"name": "fs",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "fs",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"root": {
+					"value": "@dataset().root",
+					"type": "Expression"
+				},
+				"service_account": {
+					"value": "@dataset().service_account",
+					"type": "Expression"
+				}
+			}
+		},
+		"parameters": {
+			"root": {
+				"type": "string"
+			},
+			"service_account": {
+				"type": "string"
+			},
+			"directory": {
+				"type": "string"
+			},
+			"filename": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "external"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "FileServerLocation",
+				"fileName": {
+					"value": "@dataset().filename",
+					"type": "Expression"
+				},
+				"folderPath": {
+					"value": "@dataset().directory",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

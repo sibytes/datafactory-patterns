@@ -1,0 +1,41 @@
+{
+	"name": "landing_adls",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "adls",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"directory": {
+				"type": "string"
+			},
+			"container": {
+				"type": "string"
+			},
+			"compression_type": {
+				"type": "string"
+			},
+			"compression_level": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "landing/adls"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": {
+					"value": "@dataset().directory",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().container",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

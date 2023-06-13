@@ -1,0 +1,41 @@
+{
+	"name": "landing_blbs",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "blbs",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"directory": {
+				"type": "string"
+			},
+			"container": {
+				"type": "string"
+			},
+			"compression_type": {
+				"type": "string"
+			},
+			"compression_level": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "landing/blbs"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobStorageLocation",
+				"folderPath": {
+					"value": "@dataset().directory",
+					"type": "Expression"
+				},
+				"container": {
+					"value": "@dataset().container",
+					"type": "Expression"
+				}
+			}
+		}
+	}
+}

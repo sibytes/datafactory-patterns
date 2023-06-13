@@ -1,0 +1,547 @@
+{
+	"name": "op_sqls-to-landing_adls_parquet",
+	"properties": {
+		"activities": [
+			{
+				"name": "initialise",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[ops].[intialise_process]",
+					"storedProcedureParameters": {
+						"adf_process_id": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"from_period": {
+							"value": {
+								"value": "@pipeline().parameters.from_period",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"parameters": {
+							"value": {
+								"value": "@string(pipeline().parameters.parameters)",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"parition_increment": {
+							"value": {
+								"value": "@pipeline().parameters.parition_increment",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"partition": {
+							"value": {
+								"value": "@pipeline().parameters.partition",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"process_group": {
+							"value": {
+								"value": "@pipeline().parameters.process_group",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"project": {
+							"value": {
+								"value": "@pipeline().parameters.project",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"restart": {
+							"value": {
+								"value": "@pipeline().parameters.restart",
+								"type": "Expression"
+							},
+							"type": "Boolean"
+						},
+						"to_period": {
+							"value": {
+								"value": "@pipeline().parameters.to_period",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"delete_older_than_days": {
+							"value": {
+								"value": "@pipeline().parameters.delete_older_than_days",
+								"type": "Expression"
+							},
+							"type": "Int16"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "control_db",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "get processes",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "initialise",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[ops].[get_processes]",
+						"storedProcedureParameters": {
+							"process_group": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.process_group",
+									"type": "Expression"
+								}
+							},
+							"project": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.project",
+									"type": "Expression"
+								}
+							},
+							"status": {
+								"type": "String",
+								"value": null
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "control_db",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "For Each Process",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get processes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get processes').output.value",
+						"type": "Expression"
+					},
+					"isSequential": false,
+					"batchCount": 4,
+					"activities": [
+						{
+							"name": "get_process",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[ops].[get_process]",
+									"storedProcedureParameters": {
+										"process_id": {
+											"type": "Int32",
+											"value": {
+												"value": "@item().process_id",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "control_db",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "succeeded_process",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "table_query_or_proc",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[metadata].[finish_process]",
+								"storedProcedureParameters": {
+									"process_id": {
+										"value": {
+											"value": "@item().process_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"succeeded": {
+										"value": {
+											"value": "true",
+											"type": "Expression"
+										},
+										"type": "Boolean"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "control_db",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "failed_process",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "table_query_or_proc",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[metadata].[finish_process]",
+								"storedProcedureParameters": {
+									"process_id": {
+										"value": {
+											"value": "@item().process_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"succeeded": {
+										"value": {
+											"value": "false",
+											"type": "Expression"
+										},
+										"type": "Boolean"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "control_db",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "table_query_or_proc",
+							"type": "Switch",
+							"dependsOn": [
+								{
+									"activity": "get_process",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"on": {
+									"value": "@json(activity('get_process').output.firstRow.source_service).type",
+									"type": "Expression"
+								},
+								"cases": [
+									{
+										"value": "table",
+										"activities": [
+											{
+												"name": "Copy Table",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "ParquetSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "ParquetWriteSettings"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "op_sqls",
+														"type": "DatasetReference",
+														"parameters": {
+															"table": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).table",
+																"type": "Expression"
+															},
+															"schema": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).schema",
+																"type": "Expression"
+															},
+															"secret_name": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).secret_name",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "landing_adls_parquet",
+														"type": "DatasetReference",
+														"parameters": {
+															"container": {
+																"value": "@json(activity('get_process').output.firstRow.destination_service).container\n",
+																"type": "Expression"
+															},
+															"directory": {
+																"value": "@json(activity('get_process').output.firstRow.destination_service).directory\n",
+																"type": "Expression"
+															},
+															"filename": {
+																"value": "@concat(\njson(activity('get_process').output.firstRow.destination_service).filename,\n'.',\njson(activity('get_process').output.firstRow.destination_service).ext\n)\n\n",
+																"type": "Expression"
+															},
+															"compression_type": {
+																"value": "@json(activity('get_process').output.firstRow.destination_service).compression_type",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											}
+										]
+									},
+									{
+										"value": "query",
+										"activities": [
+											{
+												"name": "Copy Query",
+												"type": "Copy",
+												"dependsOn": [],
+												"policy": {
+													"timeout": "0.12:00:00",
+													"retry": 0,
+													"retryIntervalInSeconds": 30,
+													"secureOutput": false,
+													"secureInput": false
+												},
+												"userProperties": [],
+												"typeProperties": {
+													"source": {
+														"type": "SqlServerSource",
+														"sqlReaderQuery": {
+															"value": "@concat(\n'select ', \njson(activity('get_process').output.firstRow.source_service).select,\n' from [',\njson(activity('get_process').output.firstRow.source_service).schema,\n'].[',\njson(activity('get_process').output.firstRow.source_service).table,\n'] where ',\njson(activity('get_process').output.firstRow.source_service).where\n)",
+															"type": "Expression"
+														},
+														"queryTimeout": "02:00:00",
+														"partitionOption": "None"
+													},
+													"sink": {
+														"type": "ParquetSink",
+														"storeSettings": {
+															"type": "AzureBlobFSWriteSettings"
+														},
+														"formatSettings": {
+															"type": "ParquetWriteSettings"
+														}
+													},
+													"enableStaging": false,
+													"translator": {
+														"type": "TabularTranslator",
+														"typeConversion": true,
+														"typeConversionSettings": {
+															"allowDataTruncation": true,
+															"treatBooleanAsNumber": false
+														}
+													}
+												},
+												"inputs": [
+													{
+														"referenceName": "op_sqls",
+														"type": "DatasetReference",
+														"parameters": {
+															"table": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).table",
+																"type": "Expression"
+															},
+															"schema": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).schema",
+																"type": "Expression"
+															},
+															"secret_name": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).secret_name",
+																"type": "Expression"
+															}
+														}
+													}
+												],
+												"outputs": [
+													{
+														"referenceName": "landing_adls_parquet",
+														"type": "DatasetReference",
+														"parameters": {
+															"container": {
+																"value": "@json(activity('get_process').output.firstRow.destination_service).container\n",
+																"type": "Expression"
+															},
+															"directory": {
+																"value": "@json(activity('get_process').output.firstRow.destination_service).directory\n",
+																"type": "Expression"
+															},
+															"filename": {
+																"value": "@concat(\njson(activity('get_process').output.firstRow.destination_service).filename,\n'.',\njson(activity('get_process').output.firstRow.destination_service).ext\n)\n\n",
+																"type": "Expression"
+															},
+															"compression_type": {
+																"value": "@json(activity('get_process').output.firstRow.destination_service).compression_type",
+																"type": "Expression"
+															}
+														}
+													}
+												]
+											}
+										]
+									}
+								],
+								"defaultActivities": [
+									{
+										"name": "Raise Error Invalid Type",
+										"type": "Fail",
+										"dependsOn": [],
+										"userProperties": [],
+										"typeProperties": {
+											"message": "Invalid SQL object type",
+											"errorCode": "100"
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"from_period": {
+				"type": "string",
+				"defaultValue": "2023-01-01"
+			},
+			"to_period": {
+				"type": "string",
+				"defaultValue": "2023-01-01"
+			},
+			"partition": {
+				"type": "string",
+				"defaultValue": "day"
+			},
+			"parition_increment": {
+				"type": "int",
+				"defaultValue": 1
+			},
+			"parameters": {
+				"type": "object"
+			},
+			"project": {
+				"type": "string",
+				"defaultValue": "ad_works_parquet"
+			},
+			"process_group": {
+				"type": "string",
+				"defaultValue": "default"
+			},
+			"restart": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"delete_older_than_days": {
+				"type": "int",
+				"defaultValue": 5
+			}
+		},
+		"folder": {
+			"name": "landing-adls"
+		},
+		"annotations": []
+	}
+}

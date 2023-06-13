@@ -1,0 +1,13 @@
+{
+	"name": "dbx",
+	"properties": {
+		"annotations": [],
+		"type": "AzureDatabricks",
+		"typeProperties": {
+			"domain": "https://adb-8723178682651460.0.azuredatabricks.net",
+			"authentication": "MSI",
+			"workspaceResourceId": "/subscriptions/e95203c2-64a0-43f9-bfc5-a4fdc588571a/resourceGroups/DataPlatform/providers/Microsoft.Databricks/workspaces/databricksgeneva",
+			"existingClusterId": "0407-084948-1ov2zao"
+		}
+	}
+}

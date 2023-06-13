@@ -1,0 +1,411 @@
+{
+	"name": "blbs-to-landing_blbs",
+	"properties": {
+		"activities": [
+			{
+				"name": "initialise",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[ops].[intialise_process]",
+					"storedProcedureParameters": {
+						"adf_process_id": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"from_period": {
+							"value": {
+								"value": "@pipeline().parameters.from_period",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"parameters": {
+							"value": {
+								"value": "@string(pipeline().parameters.parameters)",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"parition_increment": {
+							"value": {
+								"value": "@pipeline().parameters.parition_increment",
+								"type": "Expression"
+							},
+							"type": "Int32"
+						},
+						"partition": {
+							"value": {
+								"value": "@pipeline().parameters.partition",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"process_group": {
+							"value": {
+								"value": "@pipeline().parameters.process_group",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"project": {
+							"value": {
+								"value": "@pipeline().parameters.project",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"restart": {
+							"value": {
+								"value": "@pipeline().parameters.restart",
+								"type": "Expression"
+							},
+							"type": "Boolean"
+						},
+						"to_period": {
+							"value": {
+								"value": "@pipeline().parameters.to_period",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"delete_older_than_days": {
+							"value": {
+								"value": "@pipeline().parameters.delete_older_than_days",
+								"type": "Expression"
+							},
+							"type": "Int16"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "control_db",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "get processes",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "initialise",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[ops].[get_processes]",
+						"storedProcedureParameters": {
+							"process_group": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.process_group",
+									"type": "Expression"
+								}
+							},
+							"project": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.project",
+									"type": "Expression"
+								}
+							},
+							"status": {
+								"type": "String",
+								"value": null
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "control_db",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "For Each Process",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "get processes",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get processes').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "get_process",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[ops].[get_process]",
+									"storedProcedureParameters": {
+										"process_id": {
+											"type": "Int32",
+											"value": {
+												"value": "@item().process_id",
+												"type": "Expression"
+											}
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "control_db",
+									"type": "DatasetReference"
+								}
+							}
+						},
+						{
+							"name": "Copy data",
+							"type": "Copy",
+							"dependsOn": [
+								{
+									"activity": "get_process",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobStorageReadSettings",
+										"recursive": true,
+										"wildcardFolderPath": {
+											"value": "@json(activity('get_process').output.firstRow.source_service).directory",
+											"type": "Expression"
+										},
+										"wildcardFileName": {
+											"value": "@concat(\n    json(activity('get_process').output.firstRow.source_service).filename,\n    '.',\n    json(activity('get_process').output.firstRow.source_service).ext\n)",
+											"type": "Expression"
+										}
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobStorageWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "blbs",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "landing_blbs",
+									"type": "DatasetReference",
+									"parameters": {
+										"directory": {
+											"value": "@json(activity('get_process').output.firstRow.destination_service).directory\n",
+											"type": "Expression"
+										},
+										"container": {
+											"value": "@json(activity('get_process').output.firstRow.destination_service).container\n",
+											"type": "Expression"
+										},
+										"compression_type": {
+											"value": "@json(activity('get_process').output.firstRow.destination_service).compression_type\n",
+											"type": "Expression"
+										},
+										"compression_level": {
+											"value": "@json(activity('get_process').output.firstRow.destination_service).compression_level\n",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						},
+						{
+							"name": "succeeded_process",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy data",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[metadata].[finish_process]",
+								"storedProcedureParameters": {
+									"process_id": {
+										"value": {
+											"value": "@item().process_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"succeeded": {
+										"value": {
+											"value": "true",
+											"type": "Expression"
+										},
+										"type": "Boolean"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "control_db",
+								"type": "LinkedServiceReference"
+							}
+						},
+						{
+							"name": "failed_process",
+							"type": "SqlServerStoredProcedure",
+							"dependsOn": [
+								{
+									"activity": "Copy data",
+									"dependencyConditions": [
+										"Failed"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"storedProcedureName": "[metadata].[finish_process]",
+								"storedProcedureParameters": {
+									"process_id": {
+										"value": {
+											"value": "@item().process_id",
+											"type": "Expression"
+										},
+										"type": "Int32"
+									},
+									"succeeded": {
+										"value": {
+											"value": "false",
+											"type": "Expression"
+										},
+										"type": "Boolean"
+									}
+								}
+							},
+							"linkedServiceName": {
+								"referenceName": "control_db",
+								"type": "LinkedServiceReference"
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"from_period": {
+				"type": "string",
+				"defaultValue": "2023-01-01"
+			},
+			"to_period": {
+				"type": "string",
+				"defaultValue": "2023-01-01"
+			},
+			"partition": {
+				"type": "string",
+				"defaultValue": "day"
+			},
+			"parition_increment": {
+				"type": "int",
+				"defaultValue": 1
+			},
+			"parameters": {
+				"type": "object"
+			},
+			"project": {
+				"type": "string",
+				"defaultValue": "header_footer"
+			},
+			"process_group": {
+				"type": "string",
+				"defaultValue": "default"
+			},
+			"restart": {
+				"type": "bool",
+				"defaultValue": false
+			},
+			"delete_older_than_days": {
+				"type": "int",
+				"defaultValue": 5
+			}
+		},
+		"folder": {
+			"name": "landing-blb"
+		},
+		"annotations": []
+	}
+}

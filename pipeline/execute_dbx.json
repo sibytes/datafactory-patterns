@@ -1,0 +1,649 @@
+{
+	"name": "execute_dbx",
+	"properties": {
+		"activities": [
+			{
+				"name": "run_job",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "job_id",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(\n    'https://',\n    pipeline().parameters.dbx_host,\n    '/api/2.1/jobs/run-now'\n)",
+						"type": "Expression"
+					},
+					"method": "POST",
+					"body": {
+						"value": "@concat('\n{\n  \"idempotency_token\": \"',pipeline().RunId,'\",\n  \"job_id\": ',variables('job_id'),',\n  \"notebook_params\": {\n    \"timeslice\": \"',pipeline().parameters.dbx_timeslice,'\",\n    \"max_parallel\": \"',pipeline().parameters.dbx_max_parallel,'\",\n    \"load_type\": \"',pipeline().parameters.dbx_load_type,'\"\n  }\n}\n')",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+					}
+				}
+			},
+			{
+				"name": "lookup_job",
+				"type": "WebActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": {
+						"value": "@concat(\n    'https://',\n    pipeline().parameters.dbx_host,\n    '/api/2.1/jobs/list?',\n    'name=',\n    pipeline().parameters.dbx_job_name\n)",
+						"type": "Expression"
+					},
+					"method": "GET",
+					"body": {
+						"value": "@concat('\n{\n  \"idempotency_token\": \"',pipeline().RunId,'\",\n  \"job_id\": ','','\n}\n')",
+						"type": "Expression"
+					},
+					"authentication": {
+						"type": "MSI",
+						"resource": "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+					}
+				}
+			},
+			{
+				"name": "job_id",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "lookup_job",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "job_id",
+					"value": {
+						"value": "@string(activity('lookup_job').output.jobs[0].job_id)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Until Done",
+				"type": "Until",
+				"dependsOn": [
+					{
+						"activity": "is_done",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					},
+					{
+						"activity": "init_dbx_process",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@variables('is_done')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Wait",
+							"type": "Wait",
+							"dependsOn": [
+								{
+									"activity": "is_done_yet",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"waitTimeInSeconds": {
+									"value": "@pipeline().parameters.api_wait_seconds",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "get_job_run",
+							"type": "WebActivity",
+							"dependsOn": [
+								{
+									"activity": "run_id",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(\n    'https://',\n    pipeline().parameters.dbx_host,\n    '/api/2.1/jobs/runs/get?',\n    'run_id=',\n    variables('run_id')\n)",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+								}
+							}
+						},
+						{
+							"name": "is_done_yet",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "life_cycle_state",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "is_done",
+								"value": {
+									"value": "@or(or(\n    equals(variables('life_cycle_state'), 'TERMINATED'),\n    equals(variables('life_cycle_state'), 'INTERNAL_ERROR')),\n    equals(variables('life_cycle_state'), 'SKIPPED'))\n\n \n\n",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "run_id",
+							"type": "SetVariable",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "run_id",
+								"value": {
+									"value": "@string(activity('run_job').output.run_id)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "life_cycle_state",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "get_job_run",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "life_cycle_state",
+								"value": {
+									"value": "@string(activity('get_job_run').output.state.life_cycle_state)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "log_dbx_process",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "life_cycle_state",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[ops].[log_dbx_job]",
+									"storedProcedureParameters": {
+										"adf_process_id": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										},
+										"dbx_life_cycle_state": {
+											"type": "String",
+											"value": {
+												"value": "@variables('life_cycle_state')",
+												"type": "Expression"
+											}
+										},
+										"dbx_process_id": {
+											"type": "Int32",
+											"value": {
+												"value": "@activity('init_dbx_process').output.firstRow.dbx_process_id",
+												"type": "Expression"
+											}
+										},
+										"dbx_result_state": {
+											"type": "String",
+											"value": null
+										},
+										"job_details": {
+											"type": "String",
+											"value": {
+												"value": "@string(activity('get_job_run').output)",
+												"type": "Expression"
+											}
+										},
+										"job_id": {
+											"type": "Int64",
+											"value": {
+												"value": "@int(variables('job_id'))",
+												"type": "Expression"
+											}
+										},
+										"job_name": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.dbx_job_name",
+												"type": "Expression"
+											}
+										},
+										"project": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											}
+										},
+										"run_id": {
+											"type": "Int64",
+											"value": {
+												"value": "@int(variables('run_id'))",
+												"type": "Expression"
+											}
+										},
+										"status": {
+											"type": "String",
+											"value": "EXECUTING"
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "control_db",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					],
+					"timeout": "0.12:00:00"
+				}
+			},
+			{
+				"name": "is_done",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "run_job",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "is_done",
+					"value": {
+						"value": "@not(pipeline().parameters.wait_until_done)",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "If Waiting Until Done",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Until Done",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@pipeline().parameters.wait_until_done",
+						"type": "Expression"
+					},
+					"ifTrueActivities": [
+						{
+							"name": "get_job_result",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": {
+									"value": "@concat(\n    'https://',\n    pipeline().parameters.dbx_host,\n    '/api/2.1/jobs/runs/get?',\n    'run_id=',\n    variables('run_id')\n)",
+									"type": "Expression"
+								},
+								"method": "GET",
+								"authentication": {
+									"type": "MSI",
+									"resource": "2ff814a6-3304-4ab8-85cb-cd0e6f879c1d"
+								}
+							}
+						},
+						{
+							"name": "result",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "get_job_result",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "result",
+								"value": {
+									"value": "@string(activity('get_job_result').output.state.result_state)",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "finnish_dbx_process",
+							"type": "Lookup",
+							"dependsOn": [
+								{
+									"activity": "result",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderStoredProcedureName": "[ops].[log_dbx_job]",
+									"storedProcedureParameters": {
+										"adf_process_id": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().RunId",
+												"type": "Expression"
+											}
+										},
+										"dbx_life_cycle_state": {
+											"type": "String",
+											"value": {
+												"value": "@variables('life_cycle_state')",
+												"type": "Expression"
+											}
+										},
+										"dbx_process_id": {
+											"type": "Int32",
+											"value": {
+												"value": "@activity('init_dbx_process').output.firstRow.dbx_process_id",
+												"type": "Expression"
+											}
+										},
+										"dbx_result_state": {
+											"type": "String",
+											"value": {
+												"value": "@variables('result')",
+												"type": "Expression"
+											}
+										},
+										"job_details": {
+											"type": "String",
+											"value": {
+												"value": "@string(activity('get_job_run').output)",
+												"type": "Expression"
+											}
+										},
+										"job_id": {
+											"type": "Int64",
+											"value": {
+												"value": "@int(variables('job_id'))",
+												"type": "Expression"
+											}
+										},
+										"job_name": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.dbx_job_name",
+												"type": "Expression"
+											}
+										},
+										"project": {
+											"type": "String",
+											"value": {
+												"value": "@pipeline().parameters.project",
+												"type": "Expression"
+											}
+										},
+										"run_id": {
+											"type": "Int64",
+											"value": {
+												"value": "@int(variables('run_id'))",
+												"type": "Expression"
+											}
+										},
+										"status": {
+											"type": "String",
+											"value": "FINISHED"
+										}
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "control_db",
+									"type": "DatasetReference"
+								}
+							}
+						}
+					]
+				}
+			},
+			{
+				"name": "init_dbx_process",
+				"type": "Lookup",
+				"dependsOn": [
+					{
+						"activity": "run_job",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[ops].[log_dbx_job]",
+						"storedProcedureParameters": {
+							"adf_process_id": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().RunId",
+									"type": "Expression"
+								}
+							},
+							"dbx_life_cycle_state": {
+								"type": "String",
+								"value": null
+							},
+							"dbx_process_id": {
+								"type": "Int32",
+								"value": null
+							},
+							"dbx_result_state": {
+								"type": "String",
+								"value": null
+							},
+							"job_details": {
+								"type": "String",
+								"value": {
+									"value": "@string(activity('run_job').output)",
+									"type": "Expression"
+								}
+							},
+							"job_id": {
+								"type": "Int64",
+								"value": {
+									"value": "@int(variables('job_id'))",
+									"type": "Expression"
+								}
+							},
+							"job_name": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.dbx_job_name",
+									"type": "Expression"
+								}
+							},
+							"project": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.project",
+									"type": "Expression"
+								}
+							},
+							"run_id": {
+								"type": "Int64",
+								"value": null
+							},
+							"status": {
+								"type": "String",
+								"value": "EXECUTING"
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "control_db",
+						"type": "DatasetReference"
+					}
+				}
+			}
+		],
+		"parameters": {
+			"dbx_host": {
+				"type": "string",
+				"defaultValue": "adb-8723178682651460.0.azuredatabricks.net"
+			},
+			"dbx_job_name": {
+				"type": "string",
+				"defaultValue": "load_raw_header_footer"
+			},
+			"wait_until_done": {
+				"type": "bool",
+				"defaultValue": true
+			},
+			"api_wait_seconds": {
+				"type": "int",
+				"defaultValue": 30
+			},
+			"project": {
+				"type": "string",
+				"defaultValue": "header_footer"
+			},
+			"dbx_timeslice": {
+				"type": "string"
+			},
+			"dbx_load_type": {
+				"type": "string"
+			},
+			"dbx_max_parallel": {
+				"type": "string"
+			}
+		},
+		"variables": {
+			"job_id": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"is_done": {
+				"type": "Boolean",
+				"defaultValue": false
+			},
+			"run_id": {
+				"type": "String",
+				"defaultValue": "0"
+			},
+			"result": {
+				"type": "String"
+			},
+			"life_cycle_state": {
+				"type": "String"
+			}
+		},
+		"folder": {
+			"name": "dbx_integration"
+		},
+		"annotations": []
+	}
+}
