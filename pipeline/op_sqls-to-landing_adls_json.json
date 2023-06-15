@@ -350,8 +350,16 @@
 																"value": "@json(activity('get_process').output.firstRow.source_service).schema",
 																"type": "Expression"
 															},
-															"secret_name": {
-																"value": "@json(activity('get_process').output.firstRow.source_service).secret_name",
+															"connection_secret": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).connection_secret",
+																"type": "Expression"
+															},
+															"password_secret": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).password_secret",
+																"type": "Expression"
+															},
+															"username": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).username",
 																"type": "Expression"
 															}
 														}
@@ -441,8 +449,16 @@
 																"value": "@json(activity('get_process').output.firstRow.source_service).schema",
 																"type": "Expression"
 															},
-															"secret_name": {
-																"value": "@json(activity('get_process').output.firstRow.source_service).secret_name",
+															"connection_secret": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).connection_secret",
+																"type": "Expression"
+															},
+															"password_secret": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).password_secret",
+																"type": "Expression"
+															},
+															"username": {
+																"value": "@json(activity('get_process').output.firstRow.source_service).username",
 																"type": "Expression"
 															}
 														}

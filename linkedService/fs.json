@@ -7,6 +7,9 @@
 			},
 			"service_account": {
 				"type": "string"
+			},
+			"password_secret": {
+				"type": "string"
 			}
 		},
 		"annotations": [],
@@ -20,7 +23,10 @@
 					"referenceName": "KV_Main",
 					"type": "LinkedServiceReference"
 				},
-				"secretName": "SQL2019-DEVELOPER"
+				"secretName": {
+					"value": "@linkedService().password_secret",
+					"type": "Expression"
+				}
 			}
 		}
 	}

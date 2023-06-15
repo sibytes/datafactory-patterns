@@ -3,13 +3,7 @@
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "SQL2019",
-			"type": "LinkedServiceReference",
-			"parameters": {
-				"secret_name": {
-					"value": "@dataset().secret_name",
-					"type": "Expression"
-				}
-			}
+			"type": "LinkedServiceReference"
 		},
 		"parameters": {
 			"table": {
@@ -18,7 +12,13 @@
 			"schema": {
 				"type": "string"
 			},
-			"secret_name": {
+			"connection_secret": {
+				"type": "string"
+			},
+			"password_secret": {
+				"type": "string"
+			},
+			"username": {
 				"type": "string"
 			}
 		},
