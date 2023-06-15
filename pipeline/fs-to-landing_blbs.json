@@ -265,6 +265,10 @@
 										"filename": {
 											"value": "@json(activity('get_process').output.firstRow.source_service).filename",
 											"type": "Expression"
+										},
+										"password_secret": {
+											"value": "@json(activity('get_process').output.firstRow.source_service).password_secret",
+											"type": "Expression"
 										}
 									}
 								}

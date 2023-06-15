@@ -12,6 +12,10 @@
 				"service_account": {
 					"value": "@dataset().service_account",
 					"type": "Expression"
+				},
+				"password_secret": {
+					"value": "@dataset().password_secret",
+					"type": "Expression"
 				}
 			}
 		},
@@ -26,6 +30,9 @@
 				"type": "string"
 			},
 			"filename": {
+				"type": "string"
+			},
+			"password_secret": {
 				"type": "string"
 			}
 		},
