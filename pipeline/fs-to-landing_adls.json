@@ -318,7 +318,7 @@
 							},
 							"userProperties": [],
 							"typeProperties": {
-								"storedProcedureName": "[metadata].[finish_process]",
+								"storedProcedureName": "[ops].[finish_process]",
 								"storedProcedureParameters": {
 									"process_id": {
 										"value": {
@@ -361,7 +361,7 @@
 							},
 							"userProperties": [],
 							"typeProperties": {
-								"storedProcedureName": "[metadata].[finish_process]",
+								"storedProcedureName": "[ops].[finish_process]",
 								"storedProcedureParameters": {
 									"process_id": {
 										"value": {
